@@ -18,7 +18,7 @@ const jiraRequestHeaders = {
 
 const siteUrl = `https://${process.env.DOMAIN}.atlassian.net`
 
-app.get('/case/:caseReference/:jiraTicket', async (req, res) => {
+app.get('/case/:jiraTicket', async (req, res) => {
     try {
         const { jiraTicket } = req.params;
         
@@ -66,6 +66,32 @@ app.post('/transactions/:id', async (req, res) => {
         });
     
       res.status(200).send({ result :'Success!'})
+    } catch (error) {
+      res.status(400).send(error)
+    }
+});
+
+const _generateTicketLink = (issueKey) => {
+    return `${siteUrl}/browse/${issueKey}`
+}
+
+app.get('/case/:caseReference/jiraTicket', async (req, res) => {
+    try {
+        const { caseReference } = req.params;
+        
+        const result = await axios.get(`${siteUrl}/rest/api/latest/search?jql=project='${process.env.JIRA_PROJECT}'&fields=${process.env.JIRA_CASEID_CUSTOM_FIELD}`, {
+        headers: jiraRequestHeaders
+        });
+
+        const issueKey =  result.data.issues.filter(issue => {
+            return issue.fields[`${process.env.JIRA_CASEID_CUSTOM_FIELD}`] === caseReference
+        })[0]?.key;
+
+        const ticketLink = _generateTicketLink(issueKey)
+        res.status(200).send({
+            issueKey,
+            ticketLink
+        })
     } catch (error) {
       res.status(400).send(error)
     }
